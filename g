@@ -13,10 +13,10 @@ os_to_target() {
       echo "x86_64-apple-darwin";
       ;;
     "linux")
-      # N.B.
-      # This is tricky since most of the linux installs are non-standard.
-      # It looks
-      echo "deb9-linux"
+      # N.B. This is tricky since most of the linux installs are non-standard.
+      # FIXME this is currently passing a string as a regex but this assumption
+      # shouldn't be made. Unless we decide tomake this a convention.
+      echo "x86_64-deb.-linux"
       ;;
     *)
       echo "Platform unrecognised: ${OS}"
@@ -33,43 +33,26 @@ cleanup() {
   rm -rvf "$TMP_DIR"
 }
 
-main() {
+dl_version() {
+  VERSION="${1:-"latest"}"
+
   TMP_DIR=$(mktemp -d)
   cd "$TMP_DIR" || exit;
   OS=$(uname | tr "[:upper:]" "[:lower:]")
 
   TARGET=$(os_to_target)
 
-  if [[ $# -lt 1 ]]; then
-    # FIXME this currently errors out
-    # but normally would just show all versions.
-    echo "No command given, quitting"
-    exit 1
-  else
-    CMD="$1"
-    case "$CMD" in
-      "i" | "install")
-        if [[ $# -lt 2 ]]; then
-          echo "Version not passed, defaulting to ${VERSION}"
-        else
-          VERSION="$2"
-          echo "$VERSION"
-        fi
-        ;;
-      *)
-        echo "Unrecognised command: ${CMD}"
-        ;;
-    esac
-  fi
-
   # SUMS
   BASE_URL="$GHC_DOWNLOAD_BASE_URL/${VERSION}"
-  SHA256LINE=$(curl -s "$BASE_URL/SHA256SUMS" | grep "$TARGET")
+  SHA256LINE=$(curl -s "$BASE_URL/SHA256SUMS" | egrep "$TARGET" | head -1)
+  echo $TARGET
+  echo $SHA256LINE
   REMOTE_SHA256SUM=$( echo "$SHA256LINE" | awk '{print $1}')
 
   PACKAGE_NAME=$( echo "$SHA256LINE" | awk '{print $2}' | sed -e 's/^.\///')
 
   echo "Downloading ${PACKAGE_NAME} ..."
+  exit 1
   TARGET_URL="${BASE_URL}/${PACKAGE_NAME}"
   curl -O "${TARGET_URL}"
 
@@ -82,6 +65,34 @@ main() {
   else
     echo "Checksums match"
   fi
+}
+
+main() {
+  if [[ $# -lt 1 ]]; then
+    # FIXME this currently errors out
+    # but normally would just show all versions.
+    echo "No command given, quitting"
+    exit 1
+  else
+    CMD="$1"
+    case "$CMD" in
+      "i" | "install")
+        if [[ $# -lt 2 ]]; then
+          echo 'Please specify a specific version or `latest` for installation'
+          cleanup "$TMP_DIR"
+          exit 1
+        else
+          VERSION="$2"
+          echo "$VERSION"
+        fi
+        ;;
+      *)
+        echo "Unrecognised command: ${CMD}"
+        ;;
+    esac
+  fi
+
+  dl_version "$VERSION"
 
 
   # TODO SOME SHORTCUTS `G` SHOULD BE ABLE TO DO.
