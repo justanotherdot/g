@@ -6,6 +6,37 @@
 : "${G_PREFIX:="$HOME/haskell"}"
 : "${OLD_DIR:=$(pwd)}"
 
+usage() {
+  USAGE=$(cat <<-END
+#rustup 1.11.0 (e751ff9f8 2018-02-13)
+g 0.1.0
+The Haskell toolchain installer
+
+USAGE:
+    g [FLAGS] <SUBCOMMAND>
+
+#FLAGS:
+#    -v, --verbose    Enable verbose output
+#    -h, --help       Prints help information
+#    -V, --version    Prints version information
+
+SUBCOMMANDS:
+    install        Install a version of GHC
+    switch         Switch to an installed version of GHC
+    list           List all installed versions of GHC
+
+DISCUSSION:
+    g installs The Glorious Glasgow Haskell Compilation System,
+    enabling you to easily switch between various versions of the
+    compiler and keep them updated.
+
+    If you are new to Haskell consider ... to
+    learn Haskell.
+END
+)
+  echo "$USAGE"
+}
+
 os_to_target() {
   case "$OS" in
     "darwin")
@@ -154,10 +185,7 @@ ghc_switch_version() {
 
 main() {
   if [ $# -lt 1 ]; then
-    # FIXME this currently errors out
-    # but normally would just show all versions.
-    echo "No command given, quitting"
-    echo $(ls "$G_PREFIX")
+    usage
     exit 1
   else
     CMD="$1"
@@ -215,13 +243,14 @@ main() {
 
 
   # CABAL INSTALL
-  ## double-check that we're installing the right version of the Cabal library
-  #cabal --version
-  #> cabal-install version 1.24.0.0
-  #> using version 1.24.0.0 of the Cabal library
-  ## make sure we're not in a sandbox, jumping to $HOME is a safe bet
-  #cd
-  #cabal install Cabal-1.24.0.0
+  ## Change this value to the appropriate one
+  #VER=1.24.0.0
+  #wget "http://hackage.haskell.org/package/cabal-install-${VER}/cabal-install-${VER}.tar.gz"
+  #tar xf cabal-install-$VER.tar.gz
+  #cd cabal-install-$VER
+  #EXTRA_CONFIGURE_OPTS="" ./bootstrap.sh --sandbox --no-doc
+  ## $HOME/bin is assumed to exist and be on your $PATH
+  #cp .cabal-sandbox/bin/cabal $HOME/bin/cabal
 
   # TODO Decide if we want to lock down the package index and unlock it on every cabal install?
   #$ chmod -R -w $HOME/.ghc/x86_64-darwin-<GHC_VERSION>/package.conf.d
