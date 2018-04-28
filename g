@@ -8,17 +8,11 @@
 
 usage() {
   USAGE=$(cat <<-END
-#rustup 1.11.0 (e751ff9f8 2018-02-13)
 g 0.1.0
 The Haskell toolchain installer
 
 USAGE:
     g [FLAGS] <SUBCOMMAND>
-
-#FLAGS:
-#    -v, --verbose    Enable verbose output
-#    -h, --help       Prints help information
-#    -V, --version    Prints version information
 
 SUBCOMMANDS:
     install        Install a version of GHC
