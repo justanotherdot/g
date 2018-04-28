@@ -16,7 +16,7 @@ os_to_target() {
       # N.B. This is tricky since most of the linux installs are non-standard.
       # FIXME this is currently passing a string as a regex but this assumption
       # shouldn't be made. Unless we decide tomake this a convention.
-      echo "x86_64-deb.-linux"
+      echo "x86_64-deb9-linux[^-]"
       ;;
     *)
       echo "Platform unrecognised: ${OS}"
@@ -25,46 +25,92 @@ os_to_target() {
   esac
 }
 
+ghc_verify_checksums() {
+  echo "Verifying checksums ... "
+  local REMOTE_SHA256SUM="$2"
+  local LOCAL_SHA256SUM=$(shasum -a 256 "$1" | awk '{print $1}')
+
+  if [[ "$LOCAL_SHA256SUM" != "$REMOTE_SHA256SUM" ]]; then
+    echo "Checksums do not match"
+    echo "   $REMOTE_SHA256SUM"
+    echo "   $LOCAL_SHA256SUM"
+    echo "Cleaning up and exiting"
+    cleanup "$TMP_DIR"
+    exit 1
+  else
+    echo "Checksums match"
+    echo "   $REMOTE_SHA256SUM"
+    echo "   $LOCAL_SHA256SUM"
+  fi
+}
+
+# FIXME all invocations of this should pass OLD_DIR explicitly
 cleanup() {
-  local TMP_DIR="$1"
-  local OLD_DIR="${OLD_DIR:-$2}"
+  TMP_DIR="$1"
+  OLD_DIR="${OLD_DIR:-$2}"
   echo "Cleaning up ..."
   cd "$OLD_DIR" || exit;
   rm -rvf "$TMP_DIR"
 }
 
-dl_version() {
-  VERSION="${1:-"latest"}"
+ghc_install() {
+  local FILE="$1"
+  echo "Unpacking $(basename "$FILE") ... "
+  tar xf "$FILE"
 
-  TMP_DIR=$(mktemp -d)
+  rm "$FILE" # XXX Hack to let us grab the right directory in the next step.
+  local DIR_NAME=$(ls)
+  cd "$DIR_NAME"
+  local PREFIX="${G_PREFIX}/${DIR_NAME}"
+
+  # Check if we've installed this before.
+  # TODO This check could probably be done way sooner.
+  if [[ -d "$PREFIX" ]]; then
+    echo "$DIR_NAME looks to already be present"
+    echo "Aborting install"
+    cleanup "$TMP_DIR"
+    exit 1
+  fi
+
+  ./configure --prefix="$PREFIX"
+  make install
+}
+
+# Download and install a specific GHC version.
+ghc_download_and_install() {
+  local VERSION="$1"
+  local TMP_DIR=$(mktemp -d)
   cd "$TMP_DIR" || exit;
   OS=$(uname | tr "[:upper:]" "[:lower:]")
 
   TARGET=$(os_to_target)
 
-  # SUMS
   BASE_URL="$GHC_DOWNLOAD_BASE_URL/${VERSION}"
   SHA256LINE=$(curl -s "$BASE_URL/SHA256SUMS" | egrep "$TARGET" | head -1)
-  echo $TARGET
-  echo $SHA256LINE
   REMOTE_SHA256SUM=$( echo "$SHA256LINE" | awk '{print $1}')
 
   PACKAGE_NAME=$( echo "$SHA256LINE" | awk '{print $2}' | sed -e 's/^.\///')
 
   echo "Downloading ${PACKAGE_NAME} ..."
-  exit 1
   TARGET_URL="${BASE_URL}/${PACKAGE_NAME}"
-  curl -O "${TARGET_URL}"
-
-  LOCAL_SHA256SUM=$(shasum -a 256 "${TMP_DIR}/${PACKAGE_NAME}" | awk '{print $1}')
-
-  if [[ "$LOCAL_SHA256SUM" != "$REMOTE_SHA256SUM" ]]; then
-    echo "Checksums do not match"
-    echo "Cleaning up and exiting"
-    cleanup "$TMP_DIR"
+  curl -O "$TARGET_URL"
+  if [[ $? -eq 0 ]]; then
+    echo "Downloaded $PACKAGE_NAME successfully"
   else
-    echo "Checksums match"
+    cleanup "$TMP_DIR"
   fi
+
+  local DOWNLOAD="${TMP_DIR}/${PACKAGE_NAME}"
+
+  ghc_verify_checksums "$DOWNLOAD" "$REMOTE_SHA256SUM"
+  ghc_install "$DOWNLOAD"
+}
+
+ghc_list_available_versions() {
+  echo "Available versions:"
+  for ver in $G_PREFIX/ghc-*; do
+    echo "  ${ver##$G_PREFIX/ghc}"
+  done
 }
 
 main() {
@@ -72,6 +118,7 @@ main() {
     # FIXME this currently errors out
     # but normally would just show all versions.
     echo "No command given, quitting"
+    echo $(ls "$G_PREFIX")
     exit 1
   else
     CMD="$1"
@@ -83,7 +130,7 @@ main() {
           exit 1
         else
           VERSION="$2"
-          echo "$VERSION"
+          ghc_download_and_install "$VERSION"
         fi
         ;;
       *)
@@ -91,8 +138,6 @@ main() {
         ;;
     esac
   fi
-
-  dl_version "$VERSION"
 
 
   # TODO SOME SHORTCUTS `G` SHOULD BE ABLE TO DO.
@@ -136,13 +181,6 @@ main() {
   #  esac
   #}
 
-  # TODO Will need to consider OS
-  # GHC INSTALL
-  #$ wget https://downloads.haskell.org/~ghc/7.10.2/ghc-7.10.2-x86_64-apple-darwin.tar.xz
-  #$ tar xf ghc-7.10.2-x86_64-apple-darwin.tar.xz
-  #$ cd ghc-7.10.2
-  #$ ./configure --prefix=$HOME/haskell/ghc-7.10.2
-  #$ make install
 
   # CABAL INSTALL
   ## double-check that we're installing the right version of the Cabal library
