@@ -7,7 +7,7 @@
 : "${OLD_DIR:=$(pwd)}"
 
 usage() {
-  USAGE=$(cat <<-END
+  USAGE=$(cat << END
 g 0.1.0
 The Haskell toolchain installer
 
@@ -32,7 +32,7 @@ END
 }
 
 os_to_target() {
-  case "$OS" in
+  case "$1" in
     "darwin")
       echo "x86_64-apple-darwin";
       ;;
@@ -43,10 +43,16 @@ os_to_target() {
       echo "x86_64-deb[89]-linux[^-]"
       ;;
     *)
-      echo "Platform unrecognised: ${OS}"
       exit 1
       ;;
   esac
+}
+
+cleanup() {
+  TMP_DIR="$1"
+  echo "Cleaning up ..."
+  cd "$OLD_DIR" || exit;
+  rm -rf "$TMP_DIR"
 }
 
 ghc_verify_checksums() {
@@ -70,15 +76,6 @@ ghc_verify_checksums() {
   fi
 }
 
-# FIXME all invocations of this should pass OLD_DIR explicitly
-cleanup() {
-  TMP_DIR="$1"
-  OLD_DIR="${OLD_DIR:-$2}"
-  echo "Cleaning up ..."
-  cd "$OLD_DIR" || exit;
-  rm -rvf "$TMP_DIR"
-}
-
 ghc_install() {
   local FILE="$1"
   echo "Unpacking $(basename "$FILE") ... "
@@ -89,33 +86,36 @@ ghc_install() {
   cd "$DIR_NAME"
   local PREFIX="${G_PREFIX}/${DIR_NAME}"
 
-  # Check if we've installed this before.
-  # TODO This check could probably be done way sooner.
-  if [ -d "$PREFIX" ]; then
-    echo "$DIR_NAME looks to already be present"
-    echo "Aborting install"
-    cleanup "$TMP_DIR"
-    exit 1
-  fi
-
   ./configure --prefix="$PREFIX"
   make install
 }
 
-# Download and install a specific GHC version.
 ghc_download_and_install() {
   local VERSION="$1"
   local TMP_DIR=$(mktemp -d)
   cd "$TMP_DIR" || exit;
   OS=$(uname | tr "[:upper:]" "[:lower:]")
 
-  TARGET=$(os_to_target)
+  TARGET=$(os_to_target "$OS")
 
   BASE_URL="$GHC_DOWNLOAD_BASE_URL/${VERSION}"
   SHA256LINE=$(curl -s "$BASE_URL/SHA256SUMS" | egrep "$TARGET" | head -1)
   REMOTE_SHA256SUM=$( echo "$SHA256LINE" | awk '{print $1}')
 
   PACKAGE_NAME=$( echo "$SHA256LINE" | awk '{print $2}' | sed -e 's/^.\///')
+
+  # FIXME This won't entirely work for rc and alpha's etc.
+  # We could regex it out, instead.
+  PREFIX=$(echo $PACKAGE_NAME | cut -d'-' -f1,2)
+  echo "$PREFIX"
+  # Check if we've installed this before.
+  # TODO This check could probably be done way sooner.
+  if [ -d "$PREFIX" ]; then
+    echo "WARN: $DIR_NAME looks to already be present"
+    echo "WARN: Aborting install"
+    cleanup "$TMP_DIR"
+    exit 1
+  fi
 
   echo "Downloading ${PACKAGE_NAME} ..."
   TARGET_URL="${BASE_URL}/${PACKAGE_NAME}"
@@ -252,10 +252,6 @@ main() {
   # SETS PATH
   # $ export PATH=$HOME/haskell/ghc-7.10.2/bin:$PATH
   # TODO Best if we actually appended this to the current shell's rc.
-
-  # TODO usage function
-  # TODO usage specifies you can download by version
-  # TODO take a prefix for install location, defaults to under home with ~/.ghc and ~/.cabal
 }
 
 main "$@"
