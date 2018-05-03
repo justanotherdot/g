@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -eo pipefail
+
 #set -eux
 
 : "${GHC_DOWNLOAD_BASE_URL:="https://downloads.haskell.org/~ghc"}"
@@ -34,13 +36,13 @@ END
 os_to_target() {
   case "$1" in
     "darwin")
-      echo "x86_64-apple-darwin";
+      echo "$(uname -m)-apple-darwin";
       ;;
     "linux")
       # N.B. This is tricky since most of the linux installs are non-standard.
       # FIXME this is currently passing a string as a regex but this assumption
       # shouldn't be made. Unless we decide tomake this a convention.
-      echo "x86_64-deb[89]-linux[^-]"
+      echo "$(uname -m)(-deb[89]-linux[^-]|[^l]+linux-deb7)"
       ;;
     *)
       exit 1
@@ -60,8 +62,8 @@ ghc_verify_checksums() {
   local REMOTE_SHA256SUM="$2"
   local LOCAL_SHA256SUM=$(shasum -a 256 "$1" | awk '{print $1}')
 
-  if [ -z "$LOCAL_SHA256SUM" -a
-       -z "$REMOTE_SHA256SUM" -a
+  if [ -z "$LOCAL_SHA256SUM" -a \
+       -z "$REMOTE_SHA256SUM" -a \
        "$LOCAL_SHA256SUM" != "$REMOTE_SHA256SUM" ]; then
     echo "Checksums do not match"
     echo "   $REMOTE_SHA256SUM"
@@ -245,6 +247,47 @@ main() {
   #EXTRA_CONFIGURE_OPTS="" ./bootstrap.sh --sandbox --no-doc
   ## $HOME/bin is assumed to exist and be on your $PATH
   #cp .cabal-sandbox/bin/cabal $HOME/bin/cabal
+
+  # Switching logic for cabal?
+  #cabal-list-available() {
+  #  echo "Available versions:"
+  #  for ver in $HOME/bin/cabal-*; do
+  #    echo "  ${ver##$HOME/bin/cabal-}"
+  #  done
+  #}
+
+  ## Switch to a specific cabal version
+  #cabal-switch() {
+  #  if [ -z "$1" ]; then
+  #    echo "USAGE: cabal-switch VERSION"
+  #    cabal-list-available
+  #    return 1
+  #  fi
+
+  #  VER_PATH="$HOME/bin/cabal-$1"
+  #  if [ -x "$VER_PATH" ]; then
+  #    echo $VER_PATH
+  #    ln -s "$VER_PATH" "$HOME/bin/cabal" -f
+  #    export CABAL_VERSION=$1
+  #    cabal --version
+  #  else
+  #    echo "CABAL $1 isn't available"
+  #    cabal-list-available
+  #    return 1
+  #  fi
+  #}
+
+  ## Cycle cabal versions
+  #c() {
+  #  case $CABAL_VERSION in
+  #    1.24.0.2)
+  #      cabal-switch 2.0.0.1
+  #      ;;
+  #    *)
+  #      cabal-switch 1.24.0.2
+  #      ;;
+  #  esac
+  #}
 
   # TODO Decide if we want to lock down the package index and unlock it on every cabal install?
   #$ chmod -R -w $HOME/.ghc/x86_64-darwin-<GHC_VERSION>/package.conf.d
