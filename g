@@ -220,24 +220,6 @@ main() {
   fi
 
 
-  # TODO Do we care about cycling like this if we're going to do some sort of menu or similar?
-  ## Switch to a specific GHC version
-  #ghc-switch() {
-  #}
-  #
-  ## Cycle GHC versions
-  #g() {
-  #  case $GHC_VERSION in
-  #    7.8.4)
-  #      ghc-switch 7.10.2
-  #      ;;
-  #    *)
-  #      ghc-switch 7.8.4
-  #      ;;
-  #  esac
-  #}
-
-
   # CABAL INSTALL
   ## Change this value to the appropriate one
   #VER=1.24.0.0
