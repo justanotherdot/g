@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -eo pipefail
+
 #set -eux
 
 : "${GHC_DOWNLOAD_BASE_URL:="https://downloads.haskell.org/~ghc"}"
@@ -7,7 +9,7 @@
 : "${OLD_DIR:=$(pwd)}"
 
 usage() {
-  USAGE=$(cat <<-END
+  USAGE=$(cat << END
 g 0.1.0
 The Haskell toolchain installer
 
@@ -32,21 +34,27 @@ END
 }
 
 os_to_target() {
-  case "$OS" in
+  case "$1" in
     "darwin")
-      echo "x86_64-apple-darwin";
+      echo "$(uname -m)-apple-darwin";
       ;;
     "linux")
       # N.B. This is tricky since most of the linux installs are non-standard.
       # FIXME this is currently passing a string as a regex but this assumption
       # shouldn't be made. Unless we decide tomake this a convention.
-      echo "x86_64-deb[89]-linux[^-]"
+      echo "$(uname -m)(-deb[89]-linux[^-]|[^l]+linux-deb7)"
       ;;
     *)
-      echo "Platform unrecognised: ${OS}"
       exit 1
       ;;
   esac
+}
+
+cleanup() {
+  TMP_DIR="$1"
+  echo "Cleaning up ..."
+  cd "$OLD_DIR" || exit;
+  rm -rf "$TMP_DIR"
 }
 
 ghc_verify_checksums() {
@@ -54,8 +62,8 @@ ghc_verify_checksums() {
   local REMOTE_SHA256SUM="$2"
   local LOCAL_SHA256SUM=$(shasum -a 256 "$1" | awk '{print $1}')
 
-  if [ -z "$LOCAL_SHA256SUM" -a
-       -z "$REMOTE_SHA256SUM" -a
+  if [ -z "$LOCAL_SHA256SUM" -a \
+       -z "$REMOTE_SHA256SUM" -a \
        "$LOCAL_SHA256SUM" != "$REMOTE_SHA256SUM" ]; then
     echo "Checksums do not match"
     echo "   $REMOTE_SHA256SUM"
@@ -70,15 +78,6 @@ ghc_verify_checksums() {
   fi
 }
 
-# FIXME all invocations of this should pass OLD_DIR explicitly
-cleanup() {
-  TMP_DIR="$1"
-  OLD_DIR="${OLD_DIR:-$2}"
-  echo "Cleaning up ..."
-  cd "$OLD_DIR" || exit;
-  rm -rvf "$TMP_DIR"
-}
-
 ghc_install() {
   local FILE="$1"
   echo "Unpacking $(basename "$FILE") ... "
@@ -89,33 +88,36 @@ ghc_install() {
   cd "$DIR_NAME"
   local PREFIX="${G_PREFIX}/${DIR_NAME}"
 
-  # Check if we've installed this before.
-  # TODO This check could probably be done way sooner.
-  if [ -d "$PREFIX" ]; then
-    echo "$DIR_NAME looks to already be present"
-    echo "Aborting install"
-    cleanup "$TMP_DIR"
-    exit 1
-  fi
-
   ./configure --prefix="$PREFIX"
   make install
 }
 
-# Download and install a specific GHC version.
 ghc_download_and_install() {
   local VERSION="$1"
   local TMP_DIR=$(mktemp -d)
   cd "$TMP_DIR" || exit;
   OS=$(uname | tr "[:upper:]" "[:lower:]")
 
-  TARGET=$(os_to_target)
+  TARGET=$(os_to_target "$OS")
 
   BASE_URL="$GHC_DOWNLOAD_BASE_URL/${VERSION}"
   SHA256LINE=$(curl -s "$BASE_URL/SHA256SUMS" | egrep "$TARGET" | head -1)
   REMOTE_SHA256SUM=$( echo "$SHA256LINE" | awk '{print $1}')
 
   PACKAGE_NAME=$( echo "$SHA256LINE" | awk '{print $2}' | sed -e 's/^.\///')
+
+  # FIXME This won't entirely work for rc and alpha's etc.
+  # We could regex it out, instead.
+  PREFIX=$(echo $PACKAGE_NAME | cut -d'-' -f1,2)
+  echo "$PREFIX"
+  # Check if we've installed this before.
+  # TODO This check could probably be done way sooner.
+  if [ -d "$PREFIX" ]; then
+    echo "WARN: $DIR_NAME looks to already be present"
+    echo "WARN: Aborting install"
+    cleanup "$TMP_DIR"
+    exit 1
+  fi
 
   echo "Downloading ${PACKAGE_NAME} ..."
   TARGET_URL="${BASE_URL}/${PACKAGE_NAME}"
@@ -218,24 +220,6 @@ main() {
   fi
 
 
-  # TODO Do we care about cycling like this if we're going to do some sort of menu or similar?
-  ## Switch to a specific GHC version
-  #ghc-switch() {
-  #}
-  #
-  ## Cycle GHC versions
-  #g() {
-  #  case $GHC_VERSION in
-  #    7.8.4)
-  #      ghc-switch 7.10.2
-  #      ;;
-  #    *)
-  #      ghc-switch 7.8.4
-  #      ;;
-  #  esac
-  #}
-
-
   # CABAL INSTALL
   ## Change this value to the appropriate one
   #VER=1.24.0.0
@@ -246,16 +230,53 @@ main() {
   ## $HOME/bin is assumed to exist and be on your $PATH
   #cp .cabal-sandbox/bin/cabal $HOME/bin/cabal
 
+  # Switching logic for cabal?
+  #cabal-list-available() {
+  #  echo "Available versions:"
+  #  for ver in $HOME/bin/cabal-*; do
+  #    echo "  ${ver##$HOME/bin/cabal-}"
+  #  done
+  #}
+
+  ## Switch to a specific cabal version
+  #cabal-switch() {
+  #  if [ -z "$1" ]; then
+  #    echo "USAGE: cabal-switch VERSION"
+  #    cabal-list-available
+  #    return 1
+  #  fi
+
+  #  VER_PATH="$HOME/bin/cabal-$1"
+  #  if [ -x "$VER_PATH" ]; then
+  #    echo $VER_PATH
+  #    ln -s "$VER_PATH" "$HOME/bin/cabal" -f
+  #    export CABAL_VERSION=$1
+  #    cabal --version
+  #  else
+  #    echo "CABAL $1 isn't available"
+  #    cabal-list-available
+  #    return 1
+  #  fi
+  #}
+
+  ## Cycle cabal versions
+  #c() {
+  #  case $CABAL_VERSION in
+  #    1.24.0.2)
+  #      cabal-switch 2.0.0.1
+  #      ;;
+  #    *)
+  #      cabal-switch 1.24.0.2
+  #      ;;
+  #  esac
+  #}
+
   # TODO Decide if we want to lock down the package index and unlock it on every cabal install?
   #$ chmod -R -w $HOME/.ghc/x86_64-darwin-<GHC_VERSION>/package.conf.d
 
   # SETS PATH
   # $ export PATH=$HOME/haskell/ghc-7.10.2/bin:$PATH
   # TODO Best if we actually appended this to the current shell's rc.
-
-  # TODO usage function
-  # TODO usage specifies you can download by version
-  # TODO take a prefix for install location, defaults to under home with ~/.ghc and ~/.cabal
 }
 
 main "$@"
