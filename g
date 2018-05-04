@@ -216,20 +216,19 @@ main() {
           echo 'Please specify a specific version or `latest` for installation'
           exit 1
         else
+          # GHC
           GHC_VERSION="$2"
           ghc_download_and_install "$GHC_VERSION"
+
+          # CABAL
+          CURR_GHC_MAJ_VER=$(ghc --version | egrep -o "([0-9]+\.){2}[0-9]+$" | cut -d'.' -f1)
+          CABAL_VERSION=$(if (( "$CURR_GHC_MAJ_VER" < 8 )); then echo "1.24.0.0"; else echo "2.0.0.1"; fi)
+          echo $CABAL_VERSION
+          cabal_download_and_install "$CABAL_VERSION"
         fi
         ;;
       "l" | "list")
         ghc_list_available_versions
-        exit 1
-        ;;
-      "strap")
-        # TODO this should be a part of the ghc installations.
-        CURR_GHC_MAJ_VER=$(ghc --version | egrep -o "([0-9]+\.){2}[0-9]+$" | cut -d'.' -f1)
-        CABAL_VERSION=$(if (( "$CURR_GHC_MAJ_VER" < 8 )); then echo "1.24.0.0"; else echo "2.0.0.1"; fi)
-        echo $CABAL_VERSION
-        cabal_download_and_install "$CABAL_VERSION"
         exit 1
         ;;
       "s" | "switch")
