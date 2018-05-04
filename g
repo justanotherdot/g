@@ -218,13 +218,28 @@ main() {
         else
           # GHC
           GHC_VERSION="$2"
-          ghc_download_and_install "$GHC_VERSION"
+          echo "Checking if ghc is present ..."
+          for ver in $G_PREFIX/*; do
+            if [ "$ver" = "ghc-$GHC_VERSION" ]; then
+              ghc_download_and_install "$GHC_VERSION"
+              break
+            else
+              echo "ghc version $GHC_VERSION already installed"
+              break
+            fi
+          done
 
           # CABAL
+          echo "Checking if cabal is present ..."
           CURR_GHC_MAJ_VER=$(ghc --version | egrep -o "([0-9]+\.){2}[0-9]+$" | cut -d'.' -f1)
           CABAL_VERSION=$(if (( "$CURR_GHC_MAJ_VER" < 8 )); then echo "1.24.0.0"; else echo "2.0.0.1"; fi)
-          echo $CABAL_VERSION
-          cabal_download_and_install "$CABAL_VERSION"
+          if [ -z "$(which cabal)" ]; then
+            echo "Can't find cabal; bootstrapping version $CABAL_VERSION"
+            cabal_download_and_install "$CABAL_VERSION"
+          else
+            CURR_CABAL_VER=$(cabal --version | head -1 | egrep -o "([0-9]+\.){3}[0-9]+")
+            echo "cabal version $CURR_CABAL_VER is already installed"
+          fi
         fi
         ;;
       "l" | "list")
