@@ -93,14 +93,14 @@ ghc_install() {
 }
 
 ghc_download_and_install() {
-  local VERSION="$1"
+  local GHC_VERSION="$1"
   local TMP_DIR=$(mktemp -d)
   cd "$TMP_DIR" || exit;
   OS=$(uname | tr "[:upper:]" "[:lower:]")
 
   TARGET=$(os_to_target "$OS")
 
-  BASE_URL="$GHC_DOWNLOAD_BASE_URL/${VERSION}"
+  BASE_URL="$GHC_DOWNLOAD_BASE_URL/${GHC_VERSION}"
   SHA256LINE=$(curl -s "$BASE_URL/SHA256SUMS" | egrep "$TARGET" | head -1)
   REMOTE_SHA256SUM=$( echo "$SHA256LINE" | awk '{print $1}')
 
@@ -137,6 +137,28 @@ ghc_download_and_install() {
   cleanup "$TMP_DIR"
 }
 
+# TODO This always blows away the old version.
+# We should cache versions and we should also check before downloading and installing.
+cabal_download_and_install() {
+  if [ -z "$1" ]; then
+    echo "FATAL: No version passed to \`cabal_download_and_install'"
+    exit 1
+  fi
+
+  local TMP_DIR=$(mktemp -d)
+  cd "$TMP_DIR"
+
+  VER="$1"
+  curl -O "http://hackage.haskell.org/package/cabal-install-${VER}/cabal-install-${VER}.tar.gz"
+  tar xf "cabal-install-$VER.tar.gz"
+  cd "cabal-install-$VER"
+  EXTRA_CONFIGURE_OPTS="" ./bootstrap.sh --sandbox --no-doc
+  # $HOME/bin is assumed to exist and be on your $PATH
+  cp ".cabal-sandbox/bin/cabal" "$HOME/bin/cabal"
+
+  cleanup "$TMP_DIR"
+}
+
 ghc_list_available_versions() {
   echo "Available versions:"
   for ver in $G_PREFIX/ghc-*; do
@@ -155,13 +177,15 @@ remove_ghc_from_path() {
     t=(${t[@]%%*ghc*})
     IFS=:
     # set the path to the new array
-    PATH="${t[*]}"
+    export PATH="${t[*]}"
     unset IFS
 }
 
+# TODO This should modify a symlink so the change is reflected outside of the script.
+# We can have a general `$G_PREFIX/ghc-current/bin/*` that has symlinks to all appropriate binaries.
 ghc_switch_version() {
   if [ -z "$1" ]; then
-    echo "USAGE: g switch VERSION"
+    echo "USAGE: g switch GHC_VERSION"
     ghc_list_available_versions
     return 1
   fi
@@ -169,7 +193,8 @@ ghc_switch_version() {
   VER_PATH="$G_PREFIX/ghc-$1"
   if [ -d "$VER_PATH" ]; then
     remove_ghc_from_path
-    PATH="$VER_PATH/bin:$PATH"
+    export PATH="$VER_PATH/bin:$PATH"
+    echo $PATH # XXX
     export GHC_VERSION="$1"
     ghc --version
   else
@@ -191,8 +216,30 @@ main() {
           echo 'Please specify a specific version or `latest` for installation'
           exit 1
         else
-          VERSION="$2"
-          ghc_download_and_install "$VERSION"
+          # GHC
+          GHC_VERSION="$2"
+          echo "Checking if ghc is present ..."
+          for ver in $G_PREFIX/*; do
+            if [ "$ver" = "ghc-$GHC_VERSION" ]; then
+              ghc_download_and_install "$GHC_VERSION"
+              break
+            else
+              echo "ghc version $GHC_VERSION already installed"
+              break
+            fi
+          done
+
+          # CABAL
+          echo "Checking if cabal is present ..."
+          CURR_GHC_MAJ_VER=$(ghc --version | egrep -o "([0-9]+\.){2}[0-9]+$" | cut -d'.' -f1)
+          CABAL_VERSION=$(if (( "$CURR_GHC_MAJ_VER" < 8 )); then echo "1.24.0.0"; else echo "2.0.0.1"; fi)
+          if [ -z "$(which cabal)" ]; then
+            echo "Can't find cabal; bootstrapping version $CABAL_VERSION"
+            cabal_download_and_install "$CABAL_VERSION"
+          else
+            CURR_CABAL_VER=$(cabal --version | head -1 | egrep -o "([0-9]+\.){3}[0-9]+")
+            echo "cabal version $CURR_CABAL_VER is already installed"
+          fi
         fi
         ;;
       "l" | "list")
@@ -203,12 +250,12 @@ main() {
         if [ $# -lt 2 ]; then
           echo "Please specify version to switch to"
         else
-          VERSION="$2"
-          if [ -d "$G_PREFIX/${VERSION}" ]; then
-            echo "Could not find ${VERSION} to switch to"
+          GHC_VERSION="$2"
+          if [ -d "$G_PREFIX/${GHC_VERSION}" ]; then
+            echo "Could not find ${GHC_VERSION} to switch to"
             exit 1
           else
-            ghc_switch_version "$VERSION"
+            ghc_switch_version "$GHC_VERSION"
           fi
         fi
         exit 1
@@ -218,58 +265,6 @@ main() {
         ;;
     esac
   fi
-
-
-  # CABAL INSTALL
-  ## Change this value to the appropriate one
-  #VER=1.24.0.0
-  #wget "http://hackage.haskell.org/package/cabal-install-${VER}/cabal-install-${VER}.tar.gz"
-  #tar xf cabal-install-$VER.tar.gz
-  #cd cabal-install-$VER
-  #EXTRA_CONFIGURE_OPTS="" ./bootstrap.sh --sandbox --no-doc
-  ## $HOME/bin is assumed to exist and be on your $PATH
-  #cp .cabal-sandbox/bin/cabal $HOME/bin/cabal
-
-  # Switching logic for cabal?
-  #cabal-list-available() {
-  #  echo "Available versions:"
-  #  for ver in $HOME/bin/cabal-*; do
-  #    echo "  ${ver##$HOME/bin/cabal-}"
-  #  done
-  #}
-
-  ## Switch to a specific cabal version
-  #cabal-switch() {
-  #  if [ -z "$1" ]; then
-  #    echo "USAGE: cabal-switch VERSION"
-  #    cabal-list-available
-  #    return 1
-  #  fi
-
-  #  VER_PATH="$HOME/bin/cabal-$1"
-  #  if [ -x "$VER_PATH" ]; then
-  #    echo $VER_PATH
-  #    ln -s "$VER_PATH" "$HOME/bin/cabal" -f
-  #    export CABAL_VERSION=$1
-  #    cabal --version
-  #  else
-  #    echo "CABAL $1 isn't available"
-  #    cabal-list-available
-  #    return 1
-  #  fi
-  #}
-
-  ## Cycle cabal versions
-  #c() {
-  #  case $CABAL_VERSION in
-  #    1.24.0.2)
-  #      cabal-switch 2.0.0.1
-  #      ;;
-  #    *)
-  #      cabal-switch 1.24.0.2
-  #      ;;
-  #  esac
-  #}
 
   # TODO Decide if we want to lock down the package index and unlock it on every cabal install?
   #$ chmod -R -w $HOME/.ghc/x86_64-darwin-<GHC_VERSION>/package.conf.d
