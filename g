@@ -36,13 +36,13 @@ END
 os_to_target() {
   case "$1" in
     "darwin")
-      echo "$(uname -m)-apple-darwin";
+      echo "$(uname -m)-apple-darwin.+tar.xz$";
       ;;
     "linux")
       # N.B. This is tricky since most of the linux installs are non-standard.
       # FIXME this is currently passing a string as a regex but this assumption
       # shouldn't be made. Unless we decide tomake this a convention.
-      echo "$(uname -m)(-deb[89]-linux[^-]|[^l]+linux-deb7)"
+      echo "$(uname -m)(-deb[89]-linux[^-]|[^l]+linux-deb7).+tar.xz"
       ;;
     *)
       exit 1
