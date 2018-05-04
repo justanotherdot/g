@@ -133,12 +133,11 @@ ghc_download_and_install() {
 
   ghc_verify_checksums "$DOWNLOAD" "$REMOTE_SHA256SUM"
   ghc_install "$DOWNLOAD"
+  ghc_switch_version "$GHC_VERSION"
 
   cleanup "$TMP_DIR"
 }
 
-# TODO This always blows away the old version.
-# We should cache versions and we should also check before downloading and installing.
 cabal_download_and_install() {
   if [ -z "$1" ]; then
     echo "FATAL: No version passed to \`cabal_download_and_install'"
@@ -161,24 +160,10 @@ cabal_download_and_install() {
 
 ghc_list_available_versions() {
   echo "Available versions:"
+  # TODO ignore the current dir.
   for ver in $G_PREFIX/ghc-*; do
     echo "  ${ver##$G_PREFIX/ghc-}"
   done
-}
-
-remove_ghc_from_path() {
-    # set the Internal Field Separator to be ':'
-    # see http://www.tldp.org/LDP/abs/html/internalvariables.html
-    IFS=:
-    # convert it to an array
-    t=($PATH)
-    unset IFS
-    # remove elements with ghc from the array
-    t=(${t[@]%%*ghc*})
-    IFS=:
-    # set the path to the new array
-    export PATH="${t[*]}"
-    unset IFS
 }
 
 # TODO This should modify a symlink so the change is reflected outside of the script.
@@ -190,18 +175,22 @@ ghc_switch_version() {
     return 1
   fi
 
+  # TODO Need to check if the target versioln exists.
+
   VER_PATH="$G_PREFIX/ghc-$1"
   if [ -d "$VER_PATH" ]; then
-    remove_ghc_from_path
-    export PATH="$VER_PATH/bin:$PATH"
-    echo $PATH # XXX
-    export GHC_VERSION="$1"
+    GHC_CURR_DIR="$G_PREFIX/ghc-current"
+    mkdir -p "$GHC_CURR_DIR"
+    for abs_d in $VER_PATH/*; do
+      d=$(basename $abs_d)
+      ln -Fs "$VER_PATH/$d" "$GHC_CURR_DIR/$d"
+    done
     ghc --version
   else
-    echo "GHC $1 isn't available"
-    ghc_list_available_versions
-    return 1
+    echo "Cannot find installation for ghc version $1"
+    exit 1
   fi
+
 }
 
 main() {
@@ -219,15 +208,19 @@ main() {
           # GHC
           GHC_VERSION="$2"
           echo "Checking if ghc is present ..."
-          for ver in $G_PREFIX/*; do
+          found=0
+          for abs_ver in $G_PREFIX/*; do
+            ver=$(basename "$abs_ver")
+            echo $ver
             if [ "$ver" = "ghc-$GHC_VERSION" ]; then
-              ghc_download_and_install "$GHC_VERSION"
-              break
-            else
-              echo "ghc version $GHC_VERSION already installed"
-              break
+              found=1
             fi
           done
+          if [ $found -eq 0 ]; then
+            ghc_download_and_install "$GHC_VERSION"
+          else
+            echo "ghc version $GHC_VERSION already installed"
+          fi
 
           # CABAL
           echo "Checking if cabal is present ..."
