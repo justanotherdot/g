@@ -219,7 +219,7 @@ add_path_to_prefix() {
   else
     grep -qo "ghc-current" "$HOME/$RC_CONF"
     if [ $? -ne 0 ]; then
-      echo -e "export PATH=\"$PATH:$G_PREFIX/ghc-current/bin\"\n" >> "$HOME/$RC_CONF"
+      echo -e "export PATH=\"$PATH:$G_PREFIX/ghc-current/bin\"\\n" >> "$HOME/$RC_CONF"
     fi
   fi
 }
