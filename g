@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -eo pipefail
+#set -eo pipefail
 
 #set -eux
 
@@ -42,7 +42,7 @@ os_to_target() {
       # N.B. This is tricky since most of the linux installs are non-standard.
       # FIXME this is currently passing a string as a regex but this assumption
       # shouldn't be made. Unless we decide tomake this a convention.
-      echo "$(uname -m)(-deb[89]-linux[^-]|[^l]+linux-deb7).+tar.xz"
+      echo "$(uname -m)(-deb[89]-linux|[^l]+linux-deb7)[^-]+tar.xz$"
       ;;
     *)
       exit 1
@@ -102,6 +102,12 @@ ghc_download_and_install() {
 
   BASE_URL="$GHC_DOWNLOAD_BASE_URL/${GHC_VERSION}"
   SHA256LINE=$(curl -s "$BASE_URL/SHA256SUMS" | egrep "$TARGET" | head -1)
+
+  if [ -z "$SHA256LINE" ]; then
+    echo "FATAL: Could not find ghc $GHC_VERSION at remote."
+    exit 1
+  fi
+
   REMOTE_SHA256SUM=$( echo "$SHA256LINE" | awk '{print $1}')
 
   PACKAGE_NAME=$( echo "$SHA256LINE" | awk '{print $2}' | sed -e 's/^.\///')
@@ -155,6 +161,9 @@ cabal_download_and_install() {
   # $HOME/bin is assumed to exist and be on your $PATH
   cp ".cabal-sandbox/bin/cabal" "$HOME/bin/cabal"
 
+  # TODO Decide if we want to lock down the package index and unlock it on every cabal install?
+  #$ chmod -R -w $HOME/.ghc/x86_64-darwin-<GHC_VERSION>/package.conf.d
+
   cleanup "$TMP_DIR"
 }
 
@@ -180,9 +189,12 @@ ghc_switch_version() {
   VER_PATH="$G_PREFIX/ghc-$1"
   if [ -d "$VER_PATH" ]; then
     GHC_CURR_DIR="$G_PREFIX/ghc-current"
+    if [ -d "$GHC_CURR_DIR" ]; then
+      rm -rf "$GHC_CURR_DIR"
+    fi
     mkdir -p "$GHC_CURR_DIR"
     for abs_d in $VER_PATH/*; do
-      d=$(basename $abs_d)
+      d=$(basename "$abs_d")
       ln -Fs "$VER_PATH/$d" "$GHC_CURR_DIR/$d"
     done
     ghc --version
@@ -190,7 +202,29 @@ ghc_switch_version() {
     echo "Cannot find installation for ghc version $1"
     exit 1
   fi
+}
 
+add_path_to_prefix() {
+  local RC_CONF=""
+  case $(basename "$SHELL") in
+    "bash")
+      RC_CONF=".bashrc"
+      ;;
+    "zsh")
+      RC_CONF=".zshrc"
+      ;;
+    *)
+      ;;
+  esac
+
+  if [ -z "$RC_CONF" ]; then
+    echo 'Please add `export PATH=$HOME/haskell/ghc-current/bin:$PATH` to your shells configuration.'
+  else
+    grep -q "ghc-current" "$HOME/$RC_CONF"
+    if [ $? -ne 0 ]; then
+      echo -e "export PATH=\"\$PATH:$G_PREFIX/ghc-current/bin\"\n" >> "$HOME/$RC_CONF"
+    fi
+  fi
 }
 
 main() {
@@ -211,7 +245,6 @@ main() {
           found=0
           for abs_ver in $G_PREFIX/*; do
             ver=$(basename "$abs_ver")
-            echo $ver
             if [ "$ver" = "ghc-$GHC_VERSION" ]; then
               found=1
             fi
@@ -233,6 +266,8 @@ main() {
             CURR_CABAL_VER=$(cabal --version | head -1 | egrep -o "([0-9]+\.){3}[0-9]+")
             echo "cabal version $CURR_CABAL_VER is already installed"
           fi
+
+          add_path_to_prefix
         fi
         ;;
       "l" | "list")
@@ -259,12 +294,6 @@ main() {
     esac
   fi
 
-  # TODO Decide if we want to lock down the package index and unlock it on every cabal install?
-  #$ chmod -R -w $HOME/.ghc/x86_64-darwin-<GHC_VERSION>/package.conf.d
-
-  # SETS PATH
-  # $ export PATH=$HOME/haskell/ghc-7.10.2/bin:$PATH
-  # TODO Best if we actually appended this to the current shell's rc.
 }
 
 main "$@"
