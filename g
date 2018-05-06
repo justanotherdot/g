@@ -189,9 +189,12 @@ ghc_switch_version() {
   VER_PATH="$G_PREFIX/ghc-$1"
   if [ -d "$VER_PATH" ]; then
     GHC_CURR_DIR="$G_PREFIX/ghc-current"
+    if [ -d "$GHC_CURR_DIR" ]; then
+      rm -rf "$GHC_CURR_DIR"
+    fi
     mkdir -p "$GHC_CURR_DIR"
     for abs_d in $VER_PATH/*; do
-      d=$(basename $abs_d)
+      d=$(basename "$abs_d")
       ln -Fs "$VER_PATH/$d" "$GHC_CURR_DIR/$d"
     done
     ghc --version
@@ -217,9 +220,9 @@ add_path_to_prefix() {
   if [ -z "$RC_CONF" ]; then
     echo 'Please add `export PATH=$HOME/haskell/ghc-current/bin:$PATH` to your shells configuration.'
   else
-    grep -qo "ghc-current" "$HOME/$RC_CONF"
+    grep -q "ghc-current" "$HOME/$RC_CONF"
     if [ $? -ne 0 ]; then
-      echo -e "export PATH=\"$PATH:$G_PREFIX/ghc-current/bin\"\\n" >> "$HOME/$RC_CONF"
+      echo -e "export PATH=\"\$PATH:$G_PREFIX/ghc-current/bin\"\n" >> "$HOME/$RC_CONF"
     fi
   fi
 }
