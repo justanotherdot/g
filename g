@@ -2,8 +2,6 @@
 
 #set -eo pipefail
 
-#set -eux
-
 : "${GHC_DOWNLOAD_BASE_URL:="https://downloads.haskell.org/~ghc"}"
 : "${G_PREFIX:="$HOME/haskell"}"
 : "${OLD_DIR:=$(pwd)}"
@@ -227,6 +225,18 @@ add_path_to_prefix() {
   fi
 }
 
+ghc_remove_version() {
+  # TODO This doesn't do any validation on the input.
+  VERSION="$1"
+  TARGET="$G_PREFIX/ghc-$VERSION"
+  if [ -d "$TARGET" ]; then
+    echo "Removing $TARGET ... "
+    rm -rf "$TARGET"
+  else
+    echo "GHC version $VERSION does not appear to be installed"
+  fi
+}
+
 main() {
   if [ $# -lt 1 ]; then
     usage
@@ -236,7 +246,7 @@ main() {
     case "$CMD" in
       "i" | "install")
         if [ $# -lt 2 ]; then
-          echo 'Please specify a specific version or `latest` for installation'
+          echo 'Please specify a version or `latest` for installation'
           exit 1
         else
           # GHC
@@ -273,6 +283,15 @@ main() {
       "l" | "list")
         ghc_list_available_versions
         exit 1
+        ;;
+      "r" | "remove")
+        if [ $# -lt 2 ]; then
+          echo 'Please specify a version for removal'
+          exit 1
+        else
+          GHC_VERSION="$2"
+          ghc_remove_version "$GHC_VERSION"
+        fi
         ;;
       "s" | "switch")
         if [ $# -lt 2 ]; then
