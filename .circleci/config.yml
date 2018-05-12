@@ -1,0 +1,13 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: debian:stretch
+    steps:
+      - checkout
+      - run:
+          name: Download shellcheck
+          command: apt update && apt install shellcheck
+      - run:
+          name: Run shellcheck over g
+          command: shellcheck g
