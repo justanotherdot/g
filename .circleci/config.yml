@@ -7,7 +7,7 @@ jobs:
       - checkout
       - run:
           name: Download shellcheck
-          command: apt update && apt install shellcheck
+          command: apt update && apt install -y shellcheck
       - run:
           name: Run shellcheck over g
           command: shellcheck g
