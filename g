@@ -58,11 +58,12 @@ cleanup() {
 ghc_verify_checksums() {
   echo "Verifying checksums ... "
   local REMOTE_SHA256SUM="$2"
-  local LOCAL_SHA256SUM=$(shasum -a 256 "$1" | awk '{print $1}')
+  local LOCAL_SHA256SUM
+  LOCAL_SHA256SUM=$(shasum -a 256 "$1" | awk '{print $1}')
 
-  if [ -z "$LOCAL_SHA256SUM" -a \
-       -z "$REMOTE_SHA256SUM" -a \
-       "$LOCAL_SHA256SUM" != "$REMOTE_SHA256SUM" ]; then
+  if [ -z "$LOCAL_SHA256SUM" ] && \
+     [ -z "$REMOTE_SHA256SUM" ] && \
+     [ "$LOCAL_SHA256SUM" != "$REMOTE_SHA256SUM" ]; then
     echo "Checksums do not match"
     echo "   $REMOTE_SHA256SUM"
     echo "   $LOCAL_SHA256SUM"
@@ -82,8 +83,9 @@ ghc_install() {
   tar xf "$FILE"
 
   rm "$FILE" # XXX Hack to let us grab the right directory in the next step.
-  local DIR_NAME=$(ls)
-  cd "$DIR_NAME"
+  local DIR_NAME
+  DIR_NAME=$(ls)
+  cd "$DIR_NAME" || return 1
   local PREFIX="${G_PREFIX}/${DIR_NAME}"
 
   ./configure --prefix="$PREFIX"
@@ -92,14 +94,15 @@ ghc_install() {
 
 ghc_download_and_install() {
   local GHC_VERSION="$1"
-  local TMP_DIR=$(mktemp -d)
+  local TMP_DIR
+  TMP_DIR=$(mktemp -d)
   cd "$TMP_DIR" || exit;
   OS=$(uname | tr "[:upper:]" "[:lower:]")
 
   TARGET=$(os_to_target "$OS")
 
   BASE_URL="$GHC_DOWNLOAD_BASE_URL/${GHC_VERSION}"
-  SHA256LINE=$(curl -s "$BASE_URL/SHA256SUMS" | egrep "$TARGET" | head -1)
+  SHA256LINE=$(curl -s "$BASE_URL/SHA256SUMS" | grep -E "$TARGET" | head -1)
 
   if [ -z "$SHA256LINE" ]; then
     echo "FATAL: Could not find ghc $GHC_VERSION at remote."
@@ -112,7 +115,7 @@ ghc_download_and_install() {
 
   # FIXME This won't entirely work for rc and alpha's etc.
   # We could regex it out, instead.
-  PREFIX=$(echo $PACKAGE_NAME | cut -d'-' -f1,2)
+  PREFIX=$(echo "$PACKAGE_NAME" | cut -d'-' -f1,2)
   echo "$PREFIX"
   # Check if we've installed this before.
   # TODO This check could probably be done way sooner.
@@ -125,8 +128,7 @@ ghc_download_and_install() {
 
   echo "Downloading ${PACKAGE_NAME} ..."
   TARGET_URL="${BASE_URL}/${PACKAGE_NAME}"
-  curl -O "$TARGET_URL"
-  if [ $? -eq 0 ]; then
+  if curl -O "$TARGET_URL"; then
     echo "Downloaded $PACKAGE_NAME successfully"
   else
     cleanup "$TMP_DIR"
@@ -148,13 +150,14 @@ cabal_download_and_install() {
     exit 1
   fi
 
-  local TMP_DIR=$(mktemp -d)
-  cd "$TMP_DIR"
+  local TMP_DIR
+  TMP_DIR=$(mktemp -d)
+  cd "$TMP_DIR" || return 1
 
   VER="$1"
   curl -O "http://hackage.haskell.org/package/cabal-install-${VER}/cabal-install-${VER}.tar.gz"
   tar xf "cabal-install-$VER.tar.gz"
-  cd "cabal-install-$VER"
+  cd "cabal-install-$VER" || return 1
   EXTRA_CONFIGURE_OPTS="" ./bootstrap.sh --sandbox --no-doc
   # $HOME/bin is assumed to exist and be on your $PATH
   cp ".cabal-sandbox/bin/cabal" "$HOME/bin/cabal"
@@ -216,11 +219,10 @@ add_path_to_prefix() {
   esac
 
   if [ -z "$RC_CONF" ]; then
-    echo 'Please add `export PATH=$HOME/haskell/ghc-current/bin:$PATH` to your shells configuration.'
+    echo "Please add \`export PATH=\$HOME/haskell/ghc-current/bin:\$PATH' to your shells configuration."
   else
-    grep -q "ghc-current" "$HOME/$RC_CONF"
-    if [ $? -ne 0 ]; then
-      echo -e "export PATH=\"\$PATH:$G_PREFIX/ghc-current/bin\"\n" >> "$HOME/$RC_CONF"
+    if ! grep -q "ghc-current" "$HOME/$RC_CONF"; then
+      echo -e "export PATH=\"\$PATH:$G_PREFIX/ghc-current/bin\"\\n" >> "$HOME/$RC_CONF"
     fi
   fi
 }
@@ -246,7 +248,7 @@ main() {
     case "$CMD" in
       "i" | "install")
         if [ $# -lt 2 ]; then
-          echo 'Please specify a version or `latest` for installation'
+          echo "Please specify a version or \`latest' for installation"
           exit 1
         elif [ $# -eq 3 ] && [ "$2" = "--cabal" ]; then # XXX Super brittle.
           CABAL_VERSION="$3"
@@ -280,13 +282,13 @@ main() {
 
           # CABAL
           echo "Checking if cabal is present ..."
-          CURR_GHC_MAJ_VER=$(ghc --version | egrep -o "([0-9]+\.){2}[0-9]+$" | cut -d'.' -f1)
+          CURR_GHC_MAJ_VER=$(ghc --version | grep -Eo "([0-9]+\\.){2}[0-9]+$" | cut -d'.' -f1)
           CABAL_VERSION=$(if (( "$CURR_GHC_MAJ_VER" < 8 )); then echo "1.24.0.0"; else echo "2.0.0.1"; fi)
           if [ -z "$(which cabal)" ]; then
             echo "Can't find cabal; bootstrapping version $CABAL_VERSION"
             cabal_download_and_install "$CABAL_VERSION"
           else
-            CURR_CABAL_VER=$(cabal --version | head -1 | egrep -o "([0-9]+\.){3}[0-9]+")
+            CURR_CABAL_VER=$(cabal --version | head -1 | grep -Eo "([0-9]+\\.){3}[0-9]+")
             echo "cabal version $CURR_CABAL_VER is already installed"
           fi
 
