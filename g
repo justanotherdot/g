@@ -248,6 +248,19 @@ main() {
         if [ $# -lt 2 ]; then
           echo 'Please specify a version or `latest` for installation'
           exit 1
+        elif [ $# -eq 3 ] && [ "$2" = "--cabal" ]; then # XXX Super brittle.
+          CABAL_VERSION="$3"
+          echo "Checking if cabal version is already installed ... "
+          # TODO This will need to change when we migrate over to doing a
+          # `cabal-current` direct a la `ghc-current`.
+          CURR_CABAL_VERSION=$(cabal --version | grep -Eo '([0-9]+\.){3}[0-9]+' | head -1)
+          if which cabal &>/dev/null && [ "$CURR_CABAL_VERSION" = "$CABAL_VERSION" ]; then
+            echo "Cabal version $CURR_CABAL_VERSION already installed"
+            # TODO Per above, switch to version if cabal version is installed
+            # but not presently the one running.
+          else
+            cabal_download_and_install "$CABAL_VERSION"
+          fi
         else
           # GHC
           GHC_VERSION="$2"
