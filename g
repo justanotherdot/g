@@ -172,7 +172,9 @@ ghc_list_available_versions() {
   echo "Available versions:"
   # TODO ignore the current dir.
   for ver in $G_PREFIX/ghc-*; do
-    echo "  ${ver##$G_PREFIX/ghc-}"
+    if [ ! "$(basename "$ver")" = "ghc-current" ]; then
+      echo "  ${ver##$G_PREFIX/ghc-}"
+    fi
   done
 }
 
