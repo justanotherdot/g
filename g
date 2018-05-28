@@ -296,10 +296,11 @@ main() {
 
           add_path_to_prefix
         fi
+        exit 0;
         ;;
       "l" | "list")
         ghc_list_available_versions
-        exit 1
+        exit 0
         ;;
       "r" | "remove")
         if [ $# -lt 2 ]; then
@@ -309,6 +310,7 @@ main() {
           GHC_VERSION="$2"
           ghc_remove_version "$GHC_VERSION"
         fi
+        exit 0;
         ;;
       "s" | "switch")
         if [ $# -lt 2 ]; then
@@ -322,10 +324,15 @@ main() {
             ghc_switch_version "$GHC_VERSION"
           fi
         fi
-        exit 1
+        exit 0
+        ;;
+      "-h" | "--help") # XXX Hack until we get proper argument parsing.
+        usage
+        exit 0
         ;;
       *)
         echo "Unrecognised command: ${CMD}"
+        exit 1
         ;;
     esac
   fi
