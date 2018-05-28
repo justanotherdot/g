@@ -241,9 +241,41 @@ ghc_remove_version() {
   fi
 }
 
+ghc_switch_to_next_version() {
+  local CURR_GHC_VERSION
+  CURR_GHC_VERSION=$(ghc --version | awk '{print $NF}')
+  NEXT_GHC_VERSION=""
+
+  local CHECK_NEXT=0
+  for ver in $G_PREFIX/ghc-*; do
+    # XXX Fake a do-while.
+    if [ ! "$(basename "$ver")" = "ghc-current" ]; then
+      if [ $CHECK_NEXT -eq 1 ]; then
+        NEXT_GHC_VERSION="$(basename "$ver" | cut -d'-'  -f2)"
+        CHECK_NEXT=0
+        break;
+      fi
+
+      if [ "$(basename "$ver")" = "ghc-$CURR_GHC_VERSION" ]; then
+        CHECK_NEXT=1
+      fi
+    fi
+  done
+
+  # Loop-around.
+  if [ $CHECK_NEXT -eq 1 ]; then
+    for ver in $G_PREFIX/ghc-*; do
+      NEXT_GHC_VERSION="$(basename "$ver" | cut -d'-'  -f2)"
+      break;
+    done
+  fi
+
+  ghc_switch_version "$NEXT_GHC_VERSION"
+}
+
 main() {
   if [ $# -lt 1 ]; then
-    usage
+    ghc_switch_to_next_version
     exit 1
   else
     CMD="$1"
