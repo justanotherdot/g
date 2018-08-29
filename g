@@ -8,7 +8,7 @@
 
 usage() {
   USAGE=$(cat << END
-g 0.1.0
+g 0.2.0
 The Haskell toolchain installer
 
 USAGE:
@@ -157,7 +157,11 @@ cabal_download_and_install() {
   cd "cabal-install-$VER" || return 1
   EXTRA_CONFIGURE_OPTS="" ./bootstrap.sh --sandbox --no-doc
   # $HOME/bin is assumed to exist and be on your $PATH
-  cp ".cabal-sandbox/bin/cabal" "$HOME/bin/cabal"
+  # To install multiple cabal versions, we install the exact version
+  # then symlink to it via the $HOME/bin/cabal ref.
+  # TODO This will pave the way for switching between cabal versions easily.
+  cp ".cabal-sandbox/bin/cabal" "$HOME/bin/cabal-$VER"
+  ln -s -f "$HOME/bin/cabal-$VER" "$HOME/bin/cabal"
 
   # TODO Decide if we want to lock down the package index and unlock it on every cabal install?
   #$ chmod -R -w $HOME/.ghc/x86_64-darwin-<GHC_VERSION>/package.conf.d
