@@ -23,9 +23,6 @@ DISCUSSION:
     g installs The Glorious Glasgow Haskell Compilation System,
     enabling you to easily switch between various versions of the
     compiler and keep them updated.
-
-    If you are new to Haskell consider ... to
-    learn Haskell.
 END
 )
   echo "$USAGE"
