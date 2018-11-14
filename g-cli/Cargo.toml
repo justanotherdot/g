@@ -1,0 +1,6 @@
+[package]
+name = "g-cli"
+version = "0.1.0"
+authors = ["Ryan James Spencer <spencer.ryanjames@gmail.com>"]
+
+[dependencies]
