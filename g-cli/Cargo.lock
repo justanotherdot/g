@@ -36,7 +36,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "g-cli"
+name = "g"
 version = "0.4.0"
 dependencies = [
  "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",

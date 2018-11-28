@@ -1,28 +1,15 @@
-const USAGE: &str = r#"
-g 0.4.0
-The Haskell toolchain installer
-
-USAGE:
-    g [OPTIONS] <SUBCOMMAND>
-
-OPTIONS:
-    --verbose, -v  Run with verbose output
-
-SUBCOMMANDS:
-    install        Install a version of GHC
-    switch         Switch to an installed version of GHC
-    list           List all installed versions of GHC
-
-DISCUSSION:
-    g installs The Glorious Glasgow Haskell Compilation System,
-    enabling you to easily switch between various versions of the
-    compiler and keep them updated.
-"#;
-
-fn display_usage() {
-    println!("{}", USAGE);
-}
+extern crate clap;
+use clap::{Arg, App};
 
 fn main() {
-    display_usage();
+    let _matches = App::new("g")
+                    .version("0.4.0")
+                    .author("Ryan James Spencer <spencer.ryanjames@gmail.com>")
+                    .about("The Haskell toolchain installer")
+                    .after_help(
+                        "g installs The Glorious Glasgow Haskell Compilation System,\n\
+                        enabling you to easily switch between various versions of the\n\
+                        compiler and keep them updated.")
+                    .get_matches();
+
 }
