@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/justanotherdot/g.svg?style=svg)](https://circleci.com/gh/justanotherdot/g)
+[![Build Status](https://travis-ci.org/justanotherdot/g.svg?branch=master)](https://travis-ci.org/justanotherdot/g)
 
 # g
 > Install and manage GHC and Cabal versions
