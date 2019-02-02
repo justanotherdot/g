@@ -8,11 +8,14 @@
 
 usage() {
   USAGE=$(cat << END
-g 0.2.0
+g 0.3.0
 The Haskell toolchain installer
 
 USAGE:
-    g [FLAGS] <SUBCOMMAND>
+    g [OPTIONS] <SUBCOMMAND>
+
+OPTIONS:
+    --verbose, -v  Run with verbose output
 
 SUBCOMMANDS:
     install        Install a version of GHC
@@ -278,6 +281,13 @@ main() {
   if [ $# -lt 1 ]; then
     ghc_switch_to_next_version
     exit 1
+  elif [ $# -eq 2 ]; then
+    # XXX Naive option parsing.
+    # For now only accepts a single option.
+    OPTION="$1"
+    if [ "$OPTION" = "--verbose" ] || [ "$OPTION" = "-v" ]; then
+      set -x
+    fi
   else
     CMD="$1"
     case "$CMD" in

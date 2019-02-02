@@ -1,0 +1,26 @@
+language: rust
+rust:
+  - stable
+  - nightly
+  - beta
+matrix:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true
+before_script:
+  - rustup component add clippy-preview
+script:
+  # g_cli
+  - cd g_cli
+  - cargo clippy -- -D warnings
+  # in order to also check tests and none-default crate features, use
+  - cargo clippy --all-targets --all-features -- -D warnings
+  - cargo test
+  - cd -
+
+  # g_lib
+  - cd g_lib
+  - cargo clippy -- -D warnings
+  # in order to also check tests and none-default crate features, use
+  - cargo clippy --all-targets --all-features -- -D warnings
+  - cargo test
