@@ -6,6 +6,7 @@
 : "${G_PREFIX:="$HOME/haskell"}"
 : "${OLD_DIR:=$(pwd)}"
 
+# Ported.
 usage() {
   USAGE=$(cat << END
 g 0.3.0
@@ -31,6 +32,7 @@ END
   echo "$USAGE"
 }
 
+# Ported.
 os_to_target() {
   case "$1" in
     "darwin")
@@ -48,6 +50,7 @@ os_to_target() {
   esac
 }
 
+# Ported.
 cleanup() {
   TMP_DIR="$1"
   echo "Cleaning up ..."
@@ -55,6 +58,7 @@ cleanup() {
   rm -rf "$TMP_DIR"
 }
 
+# Ported.
 ghc_verify_checksums() {
   echo "Verifying checksums ... "
   local REMOTE_SHA256SUM="$2"
@@ -77,6 +81,7 @@ ghc_verify_checksums() {
   fi
 }
 
+# Mostly ported.
 ghc_install() {
   local FILE="$1"
   echo "Unpacking $(basename "$FILE") ... "
