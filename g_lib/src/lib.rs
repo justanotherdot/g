@@ -1,4 +1,13 @@
+extern crate regex;
+extern crate reqwest;
+extern crate select;
+
+use regex::Regex;
+use select::document::Document;
+use select::predicate::Name;
+use std::collections::HashMap;
 use std::env;
+use std::error::Error;
 use std::process::{Command, Stdio};
 
 #[allow(dead_code)]
@@ -13,12 +22,12 @@ impl std::fmt::Display for UnsupportedOS {
     }
 }
 
-impl std::error::Error for UnsupportedOS {
+impl Error for UnsupportedOS {
     fn description(&self) -> &str {
         "this OS is not supported"
     }
 
-    fn cause(&self) -> Option<&std::error::Error> {
+    fn cause(&self) -> Option<&Error> {
         None
     }
 }
@@ -28,7 +37,7 @@ impl std::error::Error for UnsupportedOS {
 /// n.b. this function gets drastically changed when we start
 /// dynamically building lookup tables for installations
 #[allow(dead_code)]
-fn os_to_target() -> Result<String, Box<std::error::Error>> {
+fn os_to_target() -> Result<String, Box<Error>> {
     let uname_out = Command::new("uname").output()?;
     let uname_machine_out = Command::new("uname").arg("-m").output()?;
 
@@ -54,7 +63,7 @@ fn os_to_target() -> Result<String, Box<std::error::Error>> {
 /// Cleanup a tmp directory
 /// This may be pointless now that this is a compiled program.
 #[allow(dead_code)]
-fn cleanup(tmp_dir: String) -> Result<(), Box<std::error::Error>> {
+fn cleanup(tmp_dir: String) -> Result<(), Box<Error>> {
     println!("Cleaning up ... ");
 
     Command::new("rm")
@@ -64,7 +73,7 @@ fn cleanup(tmp_dir: String) -> Result<(), Box<std::error::Error>> {
     Ok(())
 }
 
-fn shasum(filename: String) -> Result<String, Box<std::error::Error>> {
+fn shasum(filename: String) -> Result<String, Box<Error>> {
     let shasum_cmd = Command::new("shasum")
         .args(&["-a", "256", filename.as_ref()])
         .stdout(Stdio::piped())
@@ -80,10 +89,7 @@ fn shasum(filename: String) -> Result<String, Box<std::error::Error>> {
 
 #[allow(dead_code)]
 // TODO These probably need to be osStrs
-fn verify_checksums(
-    local_filename: String,
-    remote_filename: String,
-) -> Result<bool, Box<std::error::Error>> {
+fn verify_checksums(local_filename: String, remote_filename: String) -> Result<bool, Box<Error>> {
     println!("Verifying checksums ... ");
 
     let local_sha = shasum(local_filename)?;
@@ -110,7 +116,7 @@ fn verify_checksums(
 /// Stick downloaded ghc install in the right place
 #[allow(dead_code)]
 // TODO Should be osstr here.
-fn ghc_install(filename: String) -> Result<(), Box<std::error::Error>> {
+fn ghc_install(filename: String) -> Result<(), Box<Error>> {
     println!("Unpacking {}", filename);
 
     Command::new("tar").args(&["xf", &filename]).output()?;
@@ -176,21 +182,45 @@ type URL = String;
 type TargetName = String;
 
 #[allow(dead_code)]
-struct TargetCache(std::collections::HashMap<TargetName, URL>);
+pub struct TargetCache(HashMap<TargetName, URL>);
 
-#[allow(dead_code)]
-fn build_dep_cache() {}
+impl TargetCache {
+    #[allow(dead_code)]
+    fn new() -> Self {
+        TargetCache(HashMap::new())
+    }
 
-#[allow(dead_code)]
-fn write_dep_cache() {}
+    #[allow(dead_code)]
+    fn build(&mut self) -> Result<(), Box<Error>> {
+        let resp = reqwest::get(GHC_DOWNLOAD_BASE_URL)?.text()?;
+        let document = Document::from(resp.as_ref());
+        let re = Regex::new(r"(latest|master|^[0-9]+)")?;
+        let targets = document.find(Name("a")).filter(|t| re.is_match(&t.text()));
+        for target in targets {
+            let target_url = format!("{}/{}", &GHC_DOWNLOAD_BASE_URL, target.text());
+            self.0.insert(target.text().clone(), target_url);
+        }
 
-#[allow(dead_code)]
-fn read_dep_cache() {}
+        println!("{:#?}", self.0);
+
+        Ok(())
+    }
+
+    #[allow(dead_code)]
+    fn flush() {}
+}
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn it_works() {
         assert_eq!(2 + 2, 4);
+    }
+
+    #[test]
+    fn target_cache_builds() {
+        assert!(TargetCache::new().build().is_ok());
     }
 }
