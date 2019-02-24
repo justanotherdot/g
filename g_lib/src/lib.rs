@@ -32,10 +32,18 @@ impl Error for UnsupportedOS {
     }
 }
 
-/// Take OS as string from `uname -m`
-/// and convert it into appropriate deb
-/// n.b. this function gets drastically changed when we start
-/// dynamically building lookup tables for installations
+#[allow(dead_code)]
+fn system_and_machine() -> Result<(String, String), Box<Error>> {
+    let uname_out = Command::new("uname").output()?;
+    let uname_machine_out = Command::new("uname").arg("-m").output()?;
+
+    let system = String::from_utf8(uname_out.stdout)?;
+    let machine = String::from_utf8(uname_machine_out.stdout)?;
+
+    Ok((system.trim().to_owned(), machine.trim().to_owned()))
+}
+
+#[deprecated(since = "0.4.0", note = "please use `populate_metadata` instead")]
 #[allow(dead_code)]
 fn os_to_target() -> Result<String, Box<Error>> {
     let uname_out = Command::new("uname").output()?;
@@ -50,9 +58,9 @@ fn os_to_target() -> Result<String, Box<Error>> {
     //   It doens't matter if the cache population is from disk or from the web.
     //   Since you need internet to run this application, it makes sense the
     //   cache should be network
-    match os.as_ref() {
-        "darwin" => Ok(format!("{}-apple.darwin.+tar.xz$", machine)),
-        "linux" => Ok(format!(
+    match os.trim() {
+        "Darwin" => Ok(format!("{}-apple.darwin.+tar.xz$", machine)),
+        "Linux" => Ok(format!(
             "{}-deb[89]-linux|[^l]+linux-deb7)[^-]+tar.xz$",
             machine
         )),
@@ -99,7 +107,7 @@ fn verify_checksums(local_filename: String, remote_filename: String) -> Result<b
         println!("One of the checksums is empty");
         println!("   local: {}", local_sha);
         println!("  remote: {}", remote_sha);
-        return Ok(false);
+        Ok(false)
     } else if local_sha != remote_sha {
         println!("Checksums do not match");
         println!("   local: {}", local_sha);
@@ -182,24 +190,62 @@ type URL = String;
 type TargetName = String;
 
 #[allow(dead_code)]
+#[derive(Default)]
 pub struct TargetCache(HashMap<TargetName, URL>);
+
+#[allow(dead_code)]
+struct TargetCacheMetadata {
+    system: String,
+    machine: String,
+}
+
+#[allow(dead_code)]
+struct Target {
+    download_url: URL,
+    sha256: String,
+}
 
 impl TargetCache {
     #[allow(dead_code)]
-    fn new() -> Self {
+    pub fn new() -> Self {
         TargetCache(HashMap::new())
     }
 
     #[allow(dead_code)]
-    fn build(&mut self) -> Result<(), Box<Error>> {
+    pub fn build(&mut self) -> Result<(), Box<Error>> {
         let resp = reqwest::get(GHC_DOWNLOAD_BASE_URL)?.text()?;
         let document = Document::from(resp.as_ref());
         let re = Regex::new(r"(latest|master|^[0-9]+)")?;
         let targets = document.find(Name("a")).filter(|t| re.is_match(&t.text()));
-        for target in targets {
+
+        // let (system, machine) = system_and_machine()?;
+
+        targets.for_each(|target| {
             let target_url = format!("{}/{}", &GHC_DOWNLOAD_BASE_URL, target.text());
             self.0.insert(target.text().clone(), target_url);
-        }
+        });
+
+        // // TODO Remove.
+        // let target_url2 = format!("{}/{}", &GHC_DOWNLOAD_BASE_URL, "7.10.1");
+
+        // let inner_resp = reqwest::get(&target_url2)?.text()?;
+        // let inner_document = Document::from(inner_resp.as_ref());
+        // // TODO Same thing here for 'SHA256SUMS'
+        // let re2 = Regex::new(
+        //     format!(
+        //         "ghc-{}-{}.+{}.+xz$",
+        //         "7.10.1",
+        //         machine,
+        //         system.to_lowercase()
+        //     )
+        //     .as_ref(),
+        // )?;
+        // let items = inner_document
+        //     .find(Name("a"))
+        //     .filter(|t| re2.is_match(&t.text()));
+        // for item in items {
+        //     println!("{:#?}", item);
+        // }
 
         println!("{:#?}", self.0);
 
@@ -221,6 +267,9 @@ mod tests {
 
     #[test]
     fn target_cache_builds() {
-        assert!(TargetCache::new().build().is_ok());
+        match TargetCache::new().build() {
+            Ok(x) => println!("{:#?}", x),
+            Err(e) => println!("{:?}", e),
+        }
     }
 }
