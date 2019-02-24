@@ -158,52 +158,71 @@ fn ghc_install(filename: String) -> Result<(), Box<Error>> {
 }
 
 #[allow(dead_code)]
-fn ghc_download_and_install() {}
+fn ghc_download_and_install() {
+    // This will download from the given TargetCache URL for GHC
+    // We firstly grab the SHA256SUMS file, get our target's sha256
+    // Which we will later use to verify post copy_to from reqwest
+    // Lastly we'll unpack and install the file to the PREFIX location
+
+    // // This is mostly the 'download' step
+    // // TODO Remove.
+    // let target_url2 = format!("{}/{}", &GHC_DOWNLOAD_BASE_URL, "7.10.1");
+
+    // let inner_resp = reqwest::get(&target_url2)?.text()?;
+    // let inner_document = Document::from(inner_resp.as_ref());
+    // // TODO Same thing here for 'SHA256SUMS'
+    // let re2 = Regex::new(
+    //     format!(
+    //         "ghc-{}-{}.+{}.+xz$",
+    //         "7.10.1",
+    //         machine,
+    //         system.to_lowercase()
+    //     )
+    //     .as_ref(),
+    // )?;
+    // let items = inner_document
+    //     .find(Name("a"))
+    //     .filter(|t| re2.is_match(&t.text()));
+    // for item in items {
+    //     println!("{:#?}", item);
+    // }
+}
 
 #[allow(dead_code)]
-fn cabal_download_and_install() {}
+fn cabal_download_and_install() {
+    // Has a different URL for installation which
+    // should be reflected in the TargetCache
+}
 
 #[allow(dead_code)]
-fn ghc_list_available_versions() {}
+fn ghc_list_available_versions() {
+    // `ls` the install prefix dir
+}
 
 #[allow(dead_code)]
-fn ghc_switch_version() {}
+fn ghc_switch_version() {
+    // Switch symlinks around.
+}
 
 #[allow(dead_code)]
-fn add_path_to_prefix() {}
+fn add_prefix_to_path() {
+    // May be useless now; was just a way to automatically add
+    // the PREFIX to the PATH for execution's sake.
+}
 
 #[allow(dead_code)]
-fn ghc_remove_version() {}
+fn ghc_remove_version() {
+    // rm -rvf a given version.
+}
 
 #[allow(dead_code)]
-fn ghc_switch_to_next_version() {}
-
-// New functionality stubs.
-// might be nice to have these dep cache things
-// on a struct and have these as methods off it.
-// A dep cache could be built at program start
-// and we could pass it around as we see fit.
-
-#[allow(dead_code)]
-type URL = String;
-#[allow(dead_code)]
-type TargetName = String;
+fn ghc_switch_to_next_version() {
+    // ghc_switch_version but by finding next highest target number?
+}
 
 #[allow(dead_code)]
 #[derive(Default)]
-pub struct TargetCache(HashMap<TargetName, URL>);
-
-#[allow(dead_code)]
-struct TargetCacheMetadata {
-    system: String,
-    machine: String,
-}
-
-#[allow(dead_code)]
-struct Target {
-    download_url: URL,
-    sha256: String,
-}
+pub struct TargetCache(HashMap<String, String>);
 
 impl TargetCache {
     #[allow(dead_code)]
@@ -224,28 +243,6 @@ impl TargetCache {
             let target_url = format!("{}/{}", &GHC_DOWNLOAD_BASE_URL, target.text());
             self.0.insert(target.text().clone(), target_url);
         });
-
-        // // TODO Remove.
-        // let target_url2 = format!("{}/{}", &GHC_DOWNLOAD_BASE_URL, "7.10.1");
-
-        // let inner_resp = reqwest::get(&target_url2)?.text()?;
-        // let inner_document = Document::from(inner_resp.as_ref());
-        // // TODO Same thing here for 'SHA256SUMS'
-        // let re2 = Regex::new(
-        //     format!(
-        //         "ghc-{}-{}.+{}.+xz$",
-        //         "7.10.1",
-        //         machine,
-        //         system.to_lowercase()
-        //     )
-        //     .as_ref(),
-        // )?;
-        // let items = inner_document
-        //     .find(Name("a"))
-        //     .filter(|t| re2.is_match(&t.text()));
-        // for item in items {
-        //     println!("{:#?}", item);
-        // }
 
         println!("{:#?}", self.0);
 
