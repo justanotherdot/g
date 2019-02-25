@@ -43,7 +43,7 @@ fn system_and_machine() -> Result<(String, String), Box<Error>> {
     Ok((system.trim().to_owned(), machine.trim().to_owned()))
 }
 
-#[deprecated(since = "0.4.0", note = "please use `populate_metadata` instead")]
+#[deprecated(since = "0.4.0", note = "please use `system_and_machine` instead")]
 #[allow(dead_code)]
 fn os_to_target() -> Result<String, Box<Error>> {
     let uname_out = Command::new("uname").output()?;
@@ -97,11 +97,10 @@ fn shasum(filename: String) -> Result<String, Box<Error>> {
 
 #[allow(dead_code)]
 // TODO These probably need to be osStrs
-fn verify_checksums(local_filename: String, remote_filename: String) -> Result<bool, Box<Error>> {
+fn verify_checksums(local_filename: String, remote_sha: String) -> Result<bool, Box<Error>> {
     println!("Verifying checksums ... ");
 
     let local_sha = shasum(local_filename)?;
-    let remote_sha = shasum(remote_filename)?;
 
     if local_sha.trim().is_empty() || remote_sha.trim().is_empty() {
         println!("One of the checksums is empty");
@@ -159,6 +158,8 @@ fn ghc_install(filename: String) -> Result<(), Box<Error>> {
 
 #[allow(dead_code)]
 fn ghc_download_and_install() {
+    // let (system, machine) = system_and_machine()?;
+    //
     // This will download from the given TargetCache URL for GHC
     // We firstly grab the SHA256SUMS file, get our target's sha256
     // Which we will later use to verify post copy_to from reqwest
@@ -236,8 +237,6 @@ impl TargetCache {
         let document = Document::from(resp.as_ref());
         let re = Regex::new(r"(latest|master|^[0-9]+)")?;
         let targets = document.find(Name("a")).filter(|t| re.is_match(&t.text()));
-
-        // let (system, machine) = system_and_machine()?;
 
         targets.for_each(|target| {
             let target_url = format!("{}/{}", &GHC_DOWNLOAD_BASE_URL, target.text());
