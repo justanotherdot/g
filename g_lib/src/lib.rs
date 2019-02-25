@@ -32,40 +32,28 @@ impl Error for UnsupportedOS {
     }
 }
 
+// TODO I think it might be worth having a `run` wrapper around Command
+
+// TODO This should be a single function per concern.
+// `system` and `machine` rather than `system_and_machine`
 #[allow(dead_code)]
-fn system_and_machine() -> Result<(String, String), Box<Error>> {
+fn system() -> Result<String, Box<Error>> {
     let uname_out = Command::new("uname").output()?;
-    let uname_machine_out = Command::new("uname").arg("-m").output()?;
-
     let system = String::from_utf8(uname_out.stdout)?;
-    let machine = String::from_utf8(uname_machine_out.stdout)?;
-
-    Ok((system.trim().to_owned(), machine.trim().to_owned()))
+    // TODO These ought to be proper types.
+    // e.g. Linux, Mac, Windows, or Error on UnsupportedOs
+    // Machine is tricky, i383 or x86_64 pretty much
+    Ok(system.trim().to_owned())
 }
 
-#[deprecated(since = "0.4.0", note = "please use `system_and_machine` instead")]
 #[allow(dead_code)]
-fn os_to_target() -> Result<String, Box<Error>> {
-    let uname_out = Command::new("uname").output()?;
+fn machine() -> Result<String, Box<Error>> {
     let uname_machine_out = Command::new("uname").arg("-m").output()?;
-
-    let os = String::from_utf8(uname_out.stdout)?;
     let machine = String::from_utf8(uname_machine_out.stdout)?;
-
-    // n.b. These are regexes, not sure if this ideal, now.
-    // Instead, we should be basing everything around the cache:
-    //   The cache gets populated at runtime, and passed into here for reference.
-    //   It doens't matter if the cache population is from disk or from the web.
-    //   Since you need internet to run this application, it makes sense the
-    //   cache should be network
-    match os.trim() {
-        "Darwin" => Ok(format!("{}-apple.darwin.+tar.xz$", machine)),
-        "Linux" => Ok(format!(
-            "{}-deb[89]-linux|[^l]+linux-deb7)[^-]+tar.xz$",
-            machine
-        )),
-        _ => Err(Box::new(UnsupportedOS)),
-    }
+    // TODO These ought to be proper types.
+    // e.g. Linux, Mac, Windows, or Error on UnsupportedOs
+    // Machine is tricky, i383 or x86_64 pretty much
+    Ok(machine.trim().to_owned())
 }
 
 /// Cleanup a tmp directory
