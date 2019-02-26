@@ -1,14 +1,19 @@
 use super::old::{machine, system};
+use super::target_cache::{Target, TargetCache};
 
 #[allow(dead_code)]
+#[derive(Debug)]
 struct GMetadata {
     machine: String,
     system: String,
 }
 
 #[allow(dead_code)]
-struct G {
+#[derive(Debug)]
+pub struct G {
     metadata: GMetadata,
+    target_cache: TargetCache,
+    target: Option<Target>,
 }
 
 impl G {
@@ -25,8 +30,14 @@ impl G {
         };
 
         let metadata = GMetadata { machine, system };
+        let target_cache = TargetCache::new();
+        let target = None;
 
-        G { metadata }
+        G {
+            metadata,
+            target_cache,
+            target,
+        }
     }
 }
 

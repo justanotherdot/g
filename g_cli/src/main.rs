@@ -1,6 +1,8 @@
 extern crate clap;
 extern crate g_lib;
+
 use clap::{App, Arg, SubCommand};
+use g_lib::g::G;
 
 fn main() {
     let matches = App::new("g")
@@ -50,4 +52,8 @@ fn main() {
         )
         .get_matches();
     println!("{:?}", matches);
+
+    println!("");
+    let g = G::new();
+    println!("{:#?}", g);
 }

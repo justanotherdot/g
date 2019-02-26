@@ -2,6 +2,6 @@ extern crate regex;
 extern crate reqwest;
 extern crate select;
 
-mod g;
+pub mod g;
 mod old;
 mod target_cache;

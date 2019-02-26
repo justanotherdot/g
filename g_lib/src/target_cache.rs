@@ -16,13 +16,13 @@ enum TargetTy {
 
 #[allow(dead_code)]
 #[derive(Eq, PartialEq, Hash, Debug)]
-struct Target {
+pub struct Target {
     target_ty: TargetTy,
     version: String,
 }
 
 #[allow(dead_code)]
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct TargetCache(HashMap<Target, String>);
 
 impl TargetCache {
