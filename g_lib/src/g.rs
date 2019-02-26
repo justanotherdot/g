@@ -2,14 +2,14 @@ use super::old::{machine, system};
 use super::target_cache::{Target, TargetCache};
 
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct GMetadata {
     machine: String,
     system: String,
 }
 
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct G {
     metadata: GMetadata,
     target_cache: TargetCache,
@@ -39,6 +39,15 @@ impl G {
             target,
         }
     }
+
+    #[allow(dead_code)]
+    fn target() {}
+
+    #[allow(dead_code)]
+    fn download() {}
+
+    #[allow(dead_code)]
+    fn install() {}
 }
 
 #[cfg(test)]

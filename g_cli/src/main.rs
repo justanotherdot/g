@@ -53,7 +53,7 @@ fn main() {
         .get_matches();
     println!("{:?}", matches);
 
-    println!("");
+    println!();
     let g = G::new();
     println!("{:#?}", g);
 }

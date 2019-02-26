@@ -9,7 +9,7 @@ const GHC_DOWNLOAD_BASE_URL: &str = "https://downloads.haskell.org/~ghc";
 
 #[allow(dead_code)]
 #[derive(Eq, PartialEq, Hash, Debug)]
-enum TargetTy {
+pub enum TargetTy {
     GHC,
     Cabal,
 }
