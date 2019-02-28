@@ -8,17 +8,35 @@ use std::error::Error;
 const GHC_DOWNLOAD_BASE_URL: &str = "https://downloads.haskell.org/~ghc";
 
 #[allow(dead_code)]
-#[derive(Eq, PartialEq, Hash, Debug)]
+#[derive(Eq, PartialEq, Hash, Debug, Clone)]
 pub enum TargetTy {
     GHC,
     Cabal,
 }
 
 #[allow(dead_code)]
-#[derive(Eq, PartialEq, Hash, Debug)]
+#[derive(Eq, PartialEq, Hash, Debug, Clone)]
 pub struct Target {
-    target_ty: TargetTy,
-    version: String,
+    pub target_ty: TargetTy,
+    pub version: String,
+}
+
+impl Target {
+    #[allow(dead_code)]
+    pub fn new(target_ty_str: &str, version_str: &str) -> Option<Self> {
+        let version = version_str.to_string();
+        match target_ty_str.trim().to_lowercase().as_ref() {
+            "ghc" => {
+                let target_ty = TargetTy::GHC;
+                Some(Target { target_ty, version })
+            }
+            "cabal" => {
+                let target_ty = TargetTy::Cabal;
+                Some(Target { target_ty, version })
+            }
+            _ => None,
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -60,11 +78,45 @@ impl TargetCache {
 mod tests {
     use super::*;
 
+    // #[test]
+    // fn target_cache_builds() {
+    //     match TargetCache::new().build() {
+    //         Ok(x) => println!("{:#?}", x),
+    //         Err(e) => println!("{:?}", e),
+    //     }
+    // }
+
     #[test]
-    fn target_cache_builds() {
-        match TargetCache::new().build() {
-            Ok(x) => println!("{:#?}", x),
-            Err(e) => println!("{:?}", e),
-        }
+    fn target_ctor_succeeds_with_ghc_strs() {
+        let names = vec![" ghc", "ghc ", "ghc", "GHC"];
+        names.iter().for_each(|name| {
+            let target_ty = TargetTy::GHC;
+            let version = "8.10.2";
+            let t = Target::new(name, version);
+            assert_eq!(
+                t,
+                Some(Target {
+                    target_ty,
+                    version: version.to_string()
+                })
+            )
+        });
+    }
+
+    #[test]
+    fn target_ctor_succeeds_with_cabal_strs() {
+        let names = vec![" cabal", "cabal ", "cabal", "CABAL"];
+        names.iter().for_each(|name| {
+            let target_ty = TargetTy::Cabal;
+            let version = "8.10.2";
+            let t = Target::new(name, version);
+            assert_eq!(
+                t,
+                Some(Target {
+                    target_ty,
+                    version: version.to_string()
+                })
+            )
+        });
     }
 }

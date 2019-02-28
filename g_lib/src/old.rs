@@ -21,10 +21,10 @@ impl Error for UnsupportedOS {
     }
 }
 
-// TODO I think it might be worth having a `run` wrapper around Command
+// TODO: I think it might be worth having a `run` wrapper around Command
 
-// TODO This should be a single function per concern.
-// `system` and `machine` rather than `system_and_machine`
+// TODO: `system` and `machine` ought to probably go in a sys_info module
+
 #[allow(dead_code)]
 pub fn system() -> Result<String, Box<Error>> {
     let uname_out = Command::new("uname").output()?;
@@ -45,8 +45,6 @@ pub fn machine() -> Result<String, Box<Error>> {
     Ok(machine.trim().to_owned())
 }
 
-/// Cleanup a tmp directory
-/// This may be pointless now that this is a compiled program.
 #[allow(dead_code)]
 fn cleanup(tmp_dir: String) -> Result<(), Box<Error>> {
     println!("Cleaning up ... ");
