@@ -163,35 +163,3 @@ fn ghc_download_and_install() {
     //     println!("{:#?}", item);
     // }
 }
-
-#[allow(dead_code)]
-fn cabal_download_and_install() {
-    // Has a different URL for installation which
-    // should be reflected in the TargetCache
-}
-
-#[allow(dead_code)]
-fn ghc_list_available_versions() {
-    // `ls` the install prefix dir
-}
-
-#[allow(dead_code)]
-fn ghc_switch_version() {
-    // Switch symlinks around.
-}
-
-#[allow(dead_code)]
-fn add_prefix_to_path() {
-    // May be useless now; was just a way to automatically add
-    // the PREFIX to the PATH for execution's sake.
-}
-
-#[allow(dead_code)]
-fn ghc_remove_version() {
-    // rm -rvf a given version.
-}
-
-#[allow(dead_code)]
-fn ghc_switch_to_next_version() {
-    // ghc_switch_version but by finding next highest target number?
-}

@@ -44,6 +44,12 @@ impl G {
         }
     }
 
+    // TODO It may make sense to drop this functionality into `new`
+    // as new instances should probably not exist without being passed
+    // a target.
+    //
+    // At least then we can stop earlier in the chain if someone has passed
+    // incorrect args.
     #[allow(dead_code)]
     pub fn target(self, target: Target) -> Self {
         G {
@@ -102,6 +108,18 @@ impl G {
         }
         Ok(self)
     }
+
+    #[allow(dead_code)]
+    pub fn switch() {}
+
+    #[allow(dead_code)]
+    pub fn remove() {}
+
+    #[allow(dead_code)]
+    pub fn adjust_shell_path() {}
+
+    #[allow(dead_code)]
+    pub fn list_installed() {}
 }
 
 #[cfg(test)]
