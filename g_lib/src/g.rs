@@ -59,13 +59,41 @@ impl G {
     }
 
     #[allow(dead_code)]
-    pub fn download() {}
+    pub fn download_and_install(self, filename: String) -> Result<Self, Box<Error>> {
+        // DOWNLOAD
+        //
+        // GHC download ...
+        // let (system, machine) = system_and_machine()?;
+        //
+        // This will download from the given TargetCache URL for GHC
+        // We firstly grab the SHA256SUMS file, get our target's sha256
+        // Which we will later use to verify post copy_to from reqwest
+        // Lastly we'll unpack and install the file to the PREFIX location
 
-    // TODO It may make sense to combine download and install into
-    // download_and_install to make the step atomic, rather than
-    // it failing in case someone forgets to download first.
-    #[allow(dead_code)]
-    pub fn install(self, filename: String) -> Result<Self, Box<Error>> {
+        // // This is mostly the 'download' step
+        // // TODO Remove.
+        // let target_url2 = format!("{}/{}", &GHC_DOWNLOAD_BASE_URL, "7.10.1");
+
+        // let inner_resp = reqwest::get(&target_url2)?.text()?;
+        // let inner_document = Document::from(inner_resp.as_ref());
+        // // TODO Same thing here for 'SHA256SUMS'
+        // let re2 = Regex::new(
+        //     format!(
+        //         "ghc-{}-{}.+{}.+xz$",
+        //         "7.10.1",
+        //         machine,
+        //         system.to_lowercase()
+        //     )
+        //     .as_ref(),
+        // )?;
+        // let items = inner_document
+        //     .find(Name("a"))
+        //     .filter(|t| re2.is_match(&t.text()));
+        // for item in items {
+        //     println!("{:#?}", item);
+        // }
+
+        // INSTALL
         match self
             .target
             .clone()

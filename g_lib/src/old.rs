@@ -1,4 +1,3 @@
-use std::env;
 use std::error::Error;
 use std::process::{Command, Stdio};
 
@@ -93,73 +92,4 @@ fn verify_checksums(local_filename: String, remote_sha: String) -> Result<bool, 
         println!("  remote: {}", remote_sha);
         Ok(local_sha == remote_sha)
     }
-}
-
-/// Stick downloaded ghc install in the right place
-#[allow(dead_code)]
-// TODO Should be osstr here.
-fn ghc_install(filename: String) -> Result<(), Box<Error>> {
-    println!("Unpacking {}", filename);
-
-    Command::new("tar").args(&["xf", &filename]).output()?;
-
-    Command::new("rm").arg(&filename).output()?;
-
-    // XXX This may not be the only thing in the dir!
-    let ls_out = Command::new("ls").output()?;
-
-    // n.b. This pretends that all directory name strings are going
-    // to be valid utf-8 but this may not be the case!
-    // It's possible we could use from_utf8_lossy here
-    // but that may accrue a bug downstream that wouldn't be ideal.
-    let dir_name = String::from_utf8(ls_out.stdout)?;
-
-    Command::new("cd").arg(&dir_name).output()?;
-
-    // This should be a `Path`
-    // TODO we'll need a `resolve_prefix` func
-    // instead of directly accessing the G_PREFIX env var.
-    let g_prefix = env::var("G_PREFIX")?;
-    let prefix = format!("{:?}/{}", g_prefix, &dir_name);
-
-    Command::new("./configure")
-        .arg(format!("--prefix={}", prefix))
-        .output()?;
-
-    Command::new("make").arg("install").output()?;
-
-    Ok(())
-}
-
-#[allow(dead_code)]
-fn ghc_download_and_install() {
-    // let (system, machine) = system_and_machine()?;
-    //
-    // This will download from the given TargetCache URL for GHC
-    // We firstly grab the SHA256SUMS file, get our target's sha256
-    // Which we will later use to verify post copy_to from reqwest
-    // Lastly we'll unpack and install the file to the PREFIX location
-
-    // // This is mostly the 'download' step
-    // // TODO Remove.
-    // let target_url2 = format!("{}/{}", &GHC_DOWNLOAD_BASE_URL, "7.10.1");
-
-    // let inner_resp = reqwest::get(&target_url2)?.text()?;
-    // let inner_document = Document::from(inner_resp.as_ref());
-    // // TODO Same thing here for 'SHA256SUMS'
-    // let re2 = Regex::new(
-    //     format!(
-    //         "ghc-{}-{}.+{}.+xz$",
-    //         "7.10.1",
-    //         machine,
-    //         system.to_lowercase()
-    //     )
-    //     .as_ref(),
-    // )?;
-    // let items = inner_document
-    //     .find(Name("a"))
-    //     .filter(|t| re2.is_match(&t.text()));
-    // for item in items {
-    //     println!("{:#?}", item);
-    // }
 }
