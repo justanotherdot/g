@@ -176,7 +176,7 @@ impl G {
     // TODO: `system` and `machine` ought to probably go in a sys_info module
 
     #[allow(dead_code)]
-    pub fn system() -> Result<String, Box<Error>> {
+    fn system() -> Result<String, Box<Error>> {
         let uname_out = Command::new("uname").output()?;
         let system = String::from_utf8(uname_out.stdout)?;
         // TODO These ought to be proper types.
@@ -186,7 +186,7 @@ impl G {
     }
 
     #[allow(dead_code)]
-    pub fn machine() -> Result<String, Box<Error>> {
+    fn machine() -> Result<String, Box<Error>> {
         let uname_machine_out = Command::new("uname").arg("-m").output()?;
         let machine = String::from_utf8(uname_machine_out.stdout)?;
         // TODO These ought to be proper types.
@@ -253,6 +253,7 @@ impl G {
     #[allow(dead_code)]
     pub fn remove() {}
 
+    // This may be pointless, people can add this themselves with some helpful text.
     #[allow(dead_code)]
     pub fn adjust_shell_path() {}
 
