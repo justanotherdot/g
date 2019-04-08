@@ -1,9 +1,11 @@
 extern crate clap;
 extern crate g_lib;
+
 use clap::{App, Arg, SubCommand};
+use g_lib::g::G;
 
 fn main() {
-    let _matches = App::new("g")
+    let matches = App::new("g")
         .version("0.4.0")
         .author("Ryan James Spencer <spencer.ryanjames@gmail.com>")
         .about("The Haskell toolchain installer")
@@ -25,18 +27,11 @@ fn main() {
                     Arg::with_name("cabal")
                         .short("c")
                         .long("cabal")
-                        .help("install cabal instead of the default of GHC"),
+                        .help("install cabal instead of GHC"),
                 ),
         )
         .subcommand(
-            SubCommand::with_name("list")
-                .about("lists all current installations of GHC or cabal")
-                .arg(
-                    Arg::with_name("cabal")
-                        .short("c")
-                        .long("cabal")
-                        .help("list cabal installations"),
-                ),
+            SubCommand::with_name("list").about("lists all current installations of GHC and cabal"),
         )
         .subcommand(
             SubCommand::with_name("remove")
@@ -56,5 +51,9 @@ fn main() {
                 )),
         )
         .get_matches();
-    //println!("{:?}", matches);
+    println!("{:?}", matches);
+
+    println!();
+    let g = G::new();
+    println!("{:#?}", g);
 }

@@ -4,3 +4,9 @@ version = "0.1.0"
 authors = ["Ryan James Spencer <spencer.ryanjames@gmail.com>"]
 
 [dependencies]
+regex = "1.1.0"
+reqwest = "0.9.10"
+#ring = "0.14.6" # Currently using shasum on cli, we can later do this in-memory if we want.
+select = "0.4.2"
+serde = "1.0.88"
+tempfile = "3.0.7"
