@@ -1,9 +1,28 @@
-use super::old::{machine, system};
 use super::target_cache::{Target, TargetCache};
 use std::env;
 use std::error::Error;
 use std::process::{Command, Stdio};
 use target_cache::TargetTy;
+
+#[allow(dead_code)]
+pub fn system() -> Result<String, Box<Error>> {
+    let uname_out = Command::new("uname").output()?;
+    let system = String::from_utf8(uname_out.stdout)?;
+    // TODO These ought to be proper types.
+    // e.g. Linux, Mac, Windows, or Error on UnsupportedOs
+    // Machine is tricky, i383 or x86_64 pretty much
+    Ok(system.trim().to_owned())
+}
+
+#[allow(dead_code)]
+pub fn machine() -> Result<String, Box<Error>> {
+    let uname_machine_out = Command::new("uname").arg("-m").output()?;
+    let machine = String::from_utf8(uname_machine_out.stdout)?;
+    // TODO These ought to be proper types.
+    // e.g. Linux, Mac, Windows, or Error on UnsupportedOs
+    // Machine is tricky, i383 or x86_64 pretty much
+    Ok(machine.trim().to_owned())
+}
 
 #[allow(dead_code)]
 #[derive(Debug, Default)]
@@ -135,7 +154,7 @@ impl G {
         {
             Target {
                 target_ty: TargetTy::GHC,
-                version: _,
+                ..
             } => {
                 println!("Unpacking {}", filename);
 
